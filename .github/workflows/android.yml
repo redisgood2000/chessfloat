@@ -20,6 +20,34 @@ jobs:
           SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | head -n 1)"
           yes | "$SDKMANAGER" --licenses >/dev/null
           "$SDKMANAGER" --install "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+      - name: Download official Stockfish 19 Android ARM64
+        run: |
+          mkdir -p app/src/main/jniLibs/arm64-v8a
+          curl -fL --retry 3 \
+            "https://github.com/official-stockfish/Stockfish/releases/download/sf_19/stockfish-android-arm64-universal.tar.gz" \
+            -o /tmp/stockfish-android-arm64.tar.gz
+          echo "ebb24051aa4a222b4daaf049b882ecf1163d370c128fe02316602643f4d5e426  /tmp/stockfish-android-arm64.tar.gz" | sha256sum -c -
+          mkdir -p /tmp/stockfish-extract
+          tar -xzf /tmp/stockfish-android-arm64.tar.gz -C /tmp/stockfish-extract
+          ENGINE="$(find /tmp/stockfish-extract -type f -name 'stockfish*' -perm /111 | head -n 1)"
+          if [ -z "$ENGINE" ]; then
+            ENGINE="$(find /tmp/stockfish-extract -type f -name 'stockfish*' | head -n 1)"
+          fi
+          test -n "$ENGINE"
+          cp "$ENGINE" app/src/main/jniLibs/arm64-v8a/libstockfish.so
+          chmod 755 app/src/main/jniLibs/arm64-v8a/libstockfish.so
+          file app/src/main/jniLibs/arm64-v8a/libstockfish.so
+      - name: Include Stockfish GPLv3 notices and corresponding source pointer
+        run: |
+          mkdir -p app/src/main/assets
+          curl -fL "https://raw.githubusercontent.com/official-stockfish/Stockfish/sf_19/Copying.txt" -o app/src/main/assets/Stockfish-Copying.txt
+          cat > app/src/main/assets/Stockfish-SOURCE.txt <<'EOF'
+          Stockfish 19 official source repository and corresponding source release:
+          https://github.com/official-stockfish/Stockfish/tree/sf_19
+          Android ARM64 universal binary release:
+          https://github.com/official-stockfish/Stockfish/releases/tag/sf_19
+          The bundled binary is distributed under GNU GPL version 3.
+          EOF
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
@@ -28,5 +56,5 @@ jobs:
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: chessfloat-debug-apk
+          name: chessfloat-debug-apk-arm64-stockfish19
           path: app/build/outputs/apk/debug/app-debug.apk
