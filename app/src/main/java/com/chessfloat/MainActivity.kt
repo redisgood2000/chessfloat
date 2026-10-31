@@ -10,7 +10,6 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -25,7 +24,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.FileOutputStream
 
 private const val START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
@@ -51,14 +49,7 @@ class MainActivity : ComponentActivity() {
                     onStopCapture = {
                         stopService(Intent(this, ScreenCaptureService::class.java))
                     },
-                    onImportEngine = { uri ->
-                        val target = File(filesDir, "stockfish")
-                        contentResolver.openInputStream(uri)?.use { input ->
-                            FileOutputStream(target).use { output -> input.copyTo(output) }
-                        } ?: error("Unable to open selected engine file")
-                        check(target.setExecutable(true, true)) { "Could not mark engine executable" }
-                    },
-                    engineFile = File(filesDir, "stockfish")
+                    engineFile = File(applicationInfo.nativeLibraryDir, "libstockfish.so")
                 )
             }
         }
@@ -73,7 +64,6 @@ private fun ChessFloatHome(
     onStopOverlay: () -> Unit,
     onStartCapture: (Int, Intent) -> Unit,
     onStopCapture: () -> Unit,
-    onImportEngine: (Uri) -> Unit,
     engineFile: File
 ) {
     val context = LocalContext.current
@@ -83,7 +73,7 @@ private fun ChessFloatHome(
     var fen by remember { mutableStateOf(START_FEN) }
     var depth by remember { mutableIntStateOf(20) }
     var busy by remember { mutableStateOf(false) }
-    var status by remember { mutableStateOf("Ready. Import a compatible Stockfish Android binary to analyze.") }
+    var status by remember { mutableStateOf("Stockfish engine status will be checked from the packaged native binary.") }
     var candidates by remember { mutableStateOf<List<CandidateMove>>(emptyList()) }
     val modes = listOf("Puzzle", "Lesson", "Study / analysis",
         "Completed-game review", "Live rated game")
@@ -99,16 +89,6 @@ private fun ChessFloatHome(
             status = "Screen capture active. Frames remain on this device."
         } else status = "Screen capture permission was not granted."
     }
-    val engineLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri != null) {
-            runCatching { onImportEngine(uri) }
-                .onSuccess { status = "Engine copied to app-private storage. Check ABI compatibility." }
-                .onFailure { status = "Engine import failed: ${it.message}" }
-        }
-    }
-
     Surface(Modifier.fillMaxSize(), color = Color(0xFF0B1220)) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -172,11 +152,9 @@ private fun ChessFloatHome(
             Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF101827))) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Text("LOCAL STOCKFISH ENGINE", color = Color(0xFF93C5FD))
-                    Text(if (engineFile.exists()) "Engine file imported" else "No engine installed",
+                    Text(if (engineFile.exists()) "Stockfish 19 ARM64 bundled in this APK" else "Bundled engine missing for this device ABI",
                         color = if (engineFile.exists()) Color(0xFF4ADE80) else Color(0xFFFBBF24))
-                    OutlinedButton(onClick = { engineLauncher.launch(arrayOf("*/*")) },
-                        modifier = Modifier.fillMaxWidth()) { Text("Import Stockfish Android executable") }
-                    Text("Use a trusted Stockfish build matching your phone ABI (usually arm64-v8a). The executable must be legally redistributable and runnable on Android.",
+                    Text("Official Stockfish 19 universal ARM64 executable is packaged with this build. GPLv3 notices and the corresponding source link are included in app assets.",
                         color = Color(0xFF94A3B8), style = MaterialTheme.typography.bodySmall)
                 }
             }
