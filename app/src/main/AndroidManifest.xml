@@ -14,5 +14,6 @@
         <service android:name=".FloatingAssistantService" android:exported="false" />
         <service android:name=".ScreenCaptureService" android:exported="false"
             android:foregroundServiceType="mediaProjection" />
+        <service android:name=".BoardArrowOverlayService" android:exported="false" />
     </application>
 </manifest>
