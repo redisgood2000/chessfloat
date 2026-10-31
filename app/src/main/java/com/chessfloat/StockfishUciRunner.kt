@@ -12,8 +12,8 @@ import java.io.OutputStreamWriter
 import java.util.concurrent.TimeUnit
 
 /**
- * Runs a user-supplied Stockfish Android executable from app-private storage.
- * Import a compatible executable to filesDir/stockfish (arm64-v8a on most modern phones).
+ * Runs the bundled Stockfish Android executable extracted by Android from jniLibs.
+ * The CI build supplies the official Stockfish 19 arm64-v8a universal binary.
  * UCI scores are reported from the side-to-move perspective.
  */
 class StockfishUciRunner(private val executable: File) {
