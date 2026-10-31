@@ -1,5 +1,7 @@
 package com.chessfloat
 
+import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.media.projection.MediaProjectionManager
 import android.net.Uri
@@ -47,8 +49,7 @@ class MainActivity : ComponentActivity() {
                         ScreenCaptureService.start(this, resultCode, data)
                     },
                     onStopCapture = {
-                        startService(Intent(this, ScreenCaptureService::class.java)
-                            .setAction(ScreenCaptureService.ACTION_STOP))
+                        stopService(Intent(this, ScreenCaptureService::class.java))
                     },
                     onImportEngine = { uri ->
                         val target = File(filesDir, "stockfish")
@@ -88,12 +89,12 @@ private fun ChessFloatHome(
         "Completed-game review", "Live rated game")
     val enabled = authorized && mode != "Live rated game"
     val projectionManager = remember {
-        context.getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+        context.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
     }
     val captureLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        if (result.resultCode == RESULT_OK && result.data != null) {
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
             onStartCapture(result.resultCode, result.data!!)
             status = "Screen capture active. Frames remain on this device."
         } else status = "Screen capture permission was not granted."
